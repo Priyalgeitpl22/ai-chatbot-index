@@ -1,0 +1,15 @@
+<div id="chat-widget"></div>
+<script src="chat-widget.js"></script>
+<script>
+  ChatWidget.init({
+    elementId: 'chat-widget',
+    allowFileUpload: true,
+    allowEmojis: true,
+    allowAudioCall: false,
+    position: 'bottom-left', // or 'bottom-right'
+    iconColor: '#56a2ed',
+    chatWindowColor: '#ffffff',
+    fontColor: '#333333',
+    availability: true, // Set to true if agents are available
+  });
+</script>
