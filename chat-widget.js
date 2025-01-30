@@ -98,9 +98,11 @@
              
               </div>
             <div class="chat-messages" id="chat-messages" style="display:flex; flex-direction:column;">
-            <div class="message agent" style="text-align: left; align-self: flex-start; width: fit-content;">
-              Hello! How can I help you?
-            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="https://www.w3schools.com/w3images/avatar2.png" 
+                 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div class="message agent">Hello! How can I help you?</div>
+          </div>
             <div class="message-time" style="font-size: 10px; margin-top:5px; color: #6b7280; align-self: flex-start;">${this.getMessageTime()}</div>
 
             <div class="message user" style="text-align: right; align-self: flex-end; width: fit-content;">
@@ -108,9 +110,11 @@
             </div>
             <div class="message-time" style="font-size: 10px; margin-top:5px; color: #6b7280; align-self: flex-end;">${this.getMessageTime()}</div>
 
-            <div class="message agent" style="text-align: left; align-self: flex-start; width: fit-content;">
-              Sure! Can you please provide your order ID?
-            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="https://www.w3schools.com/w3images/avatar2.png" 
+                 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div class="message agent">Sure! Can you please provide your order ID?</div>
+          </div>
             <div class="message-time" style="font-size: 10px; margin-top:5px; color: #6b7280; align-self: flex-start;">${this.getMessageTime()}</div>
             </div>
             ${
@@ -340,6 +344,24 @@
     appendMessage: function (sender, message) {
       const messagesContainer = document.getElementById("chat-messages");
       const messageTime = this.getMessageTime();
+
+      const messageWrapper = document.createElement("div");
+      messageWrapper.style.display = "flex";
+      messageWrapper.style.alignItems = "center";
+      messageWrapper.style.gap = "10px";
+    
+      // Avatar for agent messages
+      if (sender !== "You") {
+        const avatarElement = document.createElement("img");
+        avatarElement.src = "https://www.w3schools.com/w3images/avatar2.png";
+        avatarElement.alt = "Avatar";
+        avatarElement.style.width = "30px";
+        avatarElement.style.height = "30px";
+        avatarElement.style.borderRadius = "50%";
+        avatarElement.style.objectFit = "cover";
+    
+        messageWrapper.appendChild(avatarElement);
+      }
 
       const messageElement = document.createElement("div");
       const messageTimeElement = document.createElement("div");
