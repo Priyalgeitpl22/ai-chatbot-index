@@ -4,15 +4,16 @@
     init: function (options) {
       const defaultOptions = {
         elementId: "chat-widget",
-        apiEndpoint: "",
+        apiEndpoint: "",  
         allowFileUpload: true,
         allowEmojis: true,
         allowAudioCall: false,
-        position: "bottom-right", // Available: 'bottom-left', 'bottom-right'
+        position: "bottom-right",
         iconColor: "#56a2ed",
         chatWindowColor: "#ffffff",
         fontColor: "#000000",
-        availability: true, // If false, show contact form
+        availability: true,
+        socketServer: "http://localhost:5003"
       };
 
       this.options = { ...defaultOptions, ...options };
@@ -23,6 +24,7 @@
         return;
       }
 
+      this.socket = io(this.options.socketServer); // Connect to WebSocket server
       this.renderIcon();
     },
 
@@ -172,6 +174,15 @@
       });
     },
 
+    sendMessage: function () {
+      const chatInput = document.getElementById("chat-input");
+      const message = chatInput.value.trim();
+      if (message) {
+        this.socket.emit("sendMessage", { sender: "User", message }); // Send message to backend
+        chatInput.value = "";
+      }
+    },
+
     chatInputTemplate: function () {
       return `
         <div class="chat-input-container">
@@ -222,11 +233,18 @@
 
       // Send message
       sendMessageButton.addEventListener("click", () => {
+        const chatInput = document.getElementById("chat-input");
         const message = chatInput.value.trim();
         if (message) {
           this.appendMessage("You", message);
+          this.socket.emit("sendMessage", { sender: "User", message }); // Send message to backend
           chatInput.value = "";
         }
+      });
+
+      this.socket.on("receiveMessage", (data) => {
+        const { answer } = data;
+        this.appendMessage("ChatBot", answer);
       });
 
       // Handle file upload
