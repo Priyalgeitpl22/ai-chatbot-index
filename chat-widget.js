@@ -348,13 +348,24 @@
 
       sendMessageButton.addEventListener("click", () => {
         const message = chatInput.value.trim();
-        if (message) {
-          this.appendMessage("You", message);
-          this.appendTypingIndicator();
-          this.socket.emit("sendMessage", { sender: "User", message });
-          chatInput.value = "";
+        if (!message) return;
+      
+        this.appendMessage("You", message);
+        this.appendTypingIndicator();
+      
+        if (!this.threadId) {
+          this.socket.emit("startChat", { sender: "User" });
+          this.socket.once("chatStarted", (data) => {
+            this.threadId = data.threadId;
+            this.socket.emit("sendMessage", { sender: "User", message, threadId: this.threadId });
+          });
+        } else {
+          this.socket.emit("sendMessage", { sender: "User", message, threadId: this.threadId });
         }
+      
+        chatInput.value = "";
       });
+      
       // Listen for Enter key press (without Shift) in chat input to trigger send message.
       chatInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
