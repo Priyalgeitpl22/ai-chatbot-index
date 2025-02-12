@@ -1,10 +1,7 @@
-// chat-widget.js
 (function (global) {
   const ChatWidget = {
-    // Flag to ensure global styles are injected only once
     globalStylesInjected: false,
 
-    // Initialize ChatWidget: merge options, find container, connect socket, inject styles, and render icon.
     init(options) {
       const defaultOptions = {
         elementId: "chat-widget",
@@ -21,36 +18,29 @@
       };
       this.options = { ...defaultOptions, ...options };
 
-      // Get container element from DOM
       this.container = document.getElementById(this.options.elementId);
       if (!this.container) {
         console.error("Chat widget container not found!");
         return;
       }
 
-      // Connect to the WebSocket server
       this.socket = io(this.options.socketServer);
-
-      // Inject global styles and render the chat icon
       this.injectGlobalStyles();
       this.renderIcon();
     },
 
-    // Return CSS position string based on widget's position.
     getPositionStyles() {
       return this.options.position === "bottom-left"
         ? "left: 10px; bottom: 10px;"
         : "right: 10px; bottom: 10px;";
     },
 
-    // Inject a style block into the document head.
     injectStyle(cssText) {
       const style = document.createElement("style");
       style.innerHTML = cssText;
       document.head.appendChild(style);
     },
 
-    // Consolidate and inject all global styles for the widget.
     injectGlobalStyles() {
       if (this.globalStylesInjected) return;
       const css = `
@@ -188,7 +178,6 @@
       this.globalStylesInjected = true;
     },
 
-    // Render chat icon and welcome message; reverse order if position is bottom-right.
     renderIcon() {
       const positionStyles = this.getPositionStyles();
       const isBottomRight = this.options.position === "bottom-right";
@@ -227,7 +216,6 @@
       }, 2000);
     },
 
-    // Render the main chat window with header, messages, and input/contact form.
     renderChatWindow() {
       const positionStyles = this.getPositionStyles();
       this.container.innerHTML = `
@@ -278,7 +266,6 @@
       }
     },
 
-    // Return the current time formatted as HH:MM.
     getMessageTime() {
       return new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -286,17 +273,15 @@
       });
     },
 
-    // Emit the user's message to the server and clear the input.
     sendMessage() {
       const chatInput = document.getElementById("chat-input");
       const message = chatInput.value.trim();
       if (message) {
-        this.socket.emit("sendMessage", { sender: "User", message });
+        this.socket.emit("sendMessage", { sender: "User", content: message });
         chatInput.value = "";
       }
     },
 
-    // Return the HTML template for the chat input area.
     chatInputTemplate() {
       return `
         <div class="chat-input-container">
@@ -325,7 +310,6 @@
       `;
     },
 
-    // Return the HTML template for the contact form.
     contactFormTemplate() {
       return `
         <div class="contact-form">
@@ -338,7 +322,6 @@
       `;
     },
 
-    // Set up event listeners for message sending, file uploads, and emoji picker.
     setupEventListeners() {
       const sendMessageButton = document.getElementById("send-message");
       const chatInput = document.getElementById("chat-input");
@@ -350,23 +333,24 @@
         const message = chatInput.value.trim();
         if (!message) return;
       
-        this.appendMessage("You", message);
+        this.appendMessage("User", message);
         this.appendTypingIndicator();
       
         if (!this.threadId) {
           this.socket.emit("startChat", { sender: "User" });
           this.socket.once("chatStarted", (data) => {
             this.threadId = data.threadId;
-            this.socket.emit("sendMessage", { sender: "User", message, threadId: this.threadId });
+            this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId });
+            this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId });
           });
         } else {
-          this.socket.emit("sendMessage", { sender: "User", message, threadId: this.threadId });
+          this.socket.emit("updateDashboard", { sender: "User", content: message, threadId: this.threadId });
+          this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId });
         }
       
         chatInput.value = "";
-      });
+      });      
       
-      // Listen for Enter key press (without Shift) in chat input to trigger send message.
       chatInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
@@ -381,21 +365,24 @@
         this.appendMessage("ChatBot", answer);
       });
 
+      this.socket.on("updateDashboard", (data) => {
+        console.log("Dashboard received:", data);
+        this.appendMessage("ChatBot", data.content);
+      });
+
       if (uploadButton && fileUploadInput) {
         uploadButton.addEventListener("click", () => fileUploadInput.click());
         fileUploadInput.addEventListener("change", (event) => {
           const file = event.target.files[0];
-          if (file) this.appendMessage("You", `Uploaded: ${file.name}`);
+          if (file) this.appendMessage("User", `Uploaded: ${file.name}`);
         });
       }
 
-      // Set up emoji picker if allowed.
       if (this.options.allowEmojis) {
         this.setupEmojiPicker(chatInput, emojiPickerButton);
       }
     },
 
-    // Set up the emoji picker by loading its script and configuring behavior.
     setupEmojiPicker(chatInput, emojiPickerButton) {
       const script = document.createElement("script");
       script.type = "module";
@@ -452,7 +439,6 @@
       document.body.appendChild(script);
     },
 
-    // Set up the contact form submission listener.
     setupContactFormListener() {
       const submitButton = document.getElementById("submit-contact");
       submitButton.addEventListener("click", () => {
@@ -469,17 +455,16 @@
       });
     },
 
-    // Append a message with timestamp; time aligned right for user, left for agent.
     appendMessage(sender, message) {
       const messagesContainer = document.getElementById("chat-messages");
       const messageTime = this.getMessageTime();
       const messageElement = document.createElement("div");
       const messageTimeElement = document.createElement("div");
       messageElement.className = `message ${
-        sender === "You" ? "user" : "agent"
+        sender === "User" ? "user" : "agent"
       }`;
       messageElement.textContent = message;
-      const alignment = sender === "You" ? "right" : "left";
+      const alignment = sender === "User" ? "right" : "left";
       Object.assign(messageTimeElement.style, {
         fontSize: "10px",
         color: "#6b7280",
@@ -492,9 +477,18 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     },
 
-    // Append a typing indicator (animated dots) to the chat messages.
     appendTypingIndicator() {
       const messagesContainer = document.getElementById("chat-messages");
+      if (!messagesContainer) {
+        console.error("Chat messages container not found!");
+        return;
+      }
+    
+      if (document.getElementById("typing-indicator")) {
+        console.log("Typing indicator already exists.");
+        return;
+      }
+    
       const loadingIndicator = document.createElement("div");
       loadingIndicator.classList.add("message", "agent", "loading");
       loadingIndicator.id = "typing-indicator";
@@ -505,11 +499,11 @@
           <span></span>
         </div>
       `;
+    
       messagesContainer.appendChild(loadingIndicator);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    },
+    }    
   };
 
-  // Expose ChatWidget to the global scope
   global.ChatWidget = ChatWidget;
 })(window);
