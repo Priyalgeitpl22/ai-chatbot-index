@@ -340,12 +340,13 @@
           this.socket.emit("startChat", { sender: "User" });
           this.socket.once("chatStarted", (data) => {
             this.threadId = data.threadId;
-            this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId });
-            this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId });
+            this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId, createdAt: Date.now() });
+            this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId, aiOrgId: this.options.orgId });
           });
         } else {
-          this.socket.emit("updateDashboard", { sender: "User", content: message, threadId: this.threadId });
-          this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId });
+          this.socket.emit("newThreadCreated", this.threadId);
+          this.socket.emit("updateDashboard", { sender: "User", content: message, threadId: this.threadId, createdAt: Date.now() });
+          this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId, aiOrgId: this.options.orgId });
         }
       
         chatInput.value = "";
@@ -366,8 +367,10 @@
       });
 
       this.socket.on("updateDashboard", (data) => {
-        console.log("Dashboard received:", data);
-        this.appendMessage("ChatBot", data.content);
+        if(data.sender === 'Bot' && data.threadId === this.threadId) {
+          console.log("Dashboard received:", data);
+          this.appendMessage("ChatBot", data.content);
+        }
       });
 
       if (uploadButton && fileUploadInput) {
