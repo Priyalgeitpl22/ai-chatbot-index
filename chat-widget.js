@@ -25,6 +25,7 @@
       }
 
       this.socket = io(this.options.socketServer);
+      this.onlinAgents = [];
       this.injectGlobalStyles();
       this.renderIcon();
     },
@@ -334,6 +335,7 @@
         if (!message) return;
       
         this.appendMessage("User", message);
+        if(this.onlinAgents.length === 0)
         this.appendTypingIndicator();
       
         if (!this.threadId) {
@@ -362,12 +364,26 @@
       this.socket.on("receiveMessage", (data) => {
         const { answer } = data;
         const typingIndicator = document.getElementById("typing-indicator");
-        if (typingIndicator) typingIndicator.remove();
+        if (typingIndicator) this.removeTypingIndicator();
         this.appendMessage("ChatBot", answer);
+      });
+
+      this.socket.on("typing", () => {
+        this.appendTypingIndicator();
+      });
+      
+      this.socket.on("stopTyping", () => {
+        this.removeTypingIndicator();
+      });
+
+      this.socket.on("agentStatusUpdate", (data) => {
+        this.onlinAgents = data;
       });
 
       this.socket.on("updateDashboard", (data) => {
         if(data.sender === 'Bot' && data.threadId === this.threadId) {
+          const typingIndicator = document.getElementById("typing-indicator");
+          if (typingIndicator) this.removeTypingIndicator();
           console.log("Dashboard received:", data);
           this.appendMessage("ChatBot", data.content);
         }
@@ -505,6 +521,14 @@
     
       messagesContainer.appendChild(loadingIndicator);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    },
+
+    removeTypingIndicator() {
+      const typingIndicator = document.getElementById("typing-indicator");
+      if (typingIndicator) {
+        typingIndicator.remove();
+        console.log("Typing indicator removed.");
+      }
     }    
   };
 
