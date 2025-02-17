@@ -278,7 +278,7 @@
       const chatInput = document.getElementById("chat-input");
       const message = chatInput.value.trim();
       if (message) {
-        this.socket.emit("sendMessage", { sender: "User", content: message });
+        this.socket.emit("sendMessage", { sender: "User", content: message, aiOrgId: this.options.orgId});
         chatInput.value = "";
       }
     },
@@ -362,10 +362,10 @@
       });
 
       this.socket.on("receiveMessage", (data) => {
-        const { answer } = data;
+        const { content } = data;
         const typingIndicator = document.getElementById("typing-indicator");
         if (typingIndicator) this.removeTypingIndicator();
-        this.appendMessage("ChatBot", answer);
+        this.appendMessage("ChatBot", content);
       });
 
       this.socket.on("typing", () => {
