@@ -339,7 +339,7 @@
         this.appendTypingIndicator();
       
         if (!this.threadId) {
-          this.socket.emit("startChat", { sender: "User" });
+          this.socket.emit("startChat", { sender: "User", aiOrgId: this.options.orgId });
           this.socket.once("chatStarted", (data) => {
             this.threadId = data.threadId;
             this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId, createdAt: Date.now() });
