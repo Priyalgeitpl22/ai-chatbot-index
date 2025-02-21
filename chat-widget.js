@@ -97,7 +97,12 @@
           opacity: 0.7; 
         }
         .chat-actions button:hover { opacity: 0.8; }
-        .contact-form { padding: 10px; }
+        .contact-form { 
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
         .contact-form input, .contact-form textarea { 
           width: 100%; 
           margin-bottom: 10px; 
@@ -267,6 +272,19 @@
       }
     },
 
+    renderContactForm() {
+      const chatContainer = document.getElementById("chat-messages");
+      if (!chatContainer) return;
+      
+      if (document.getElementById("contact-form-container")) return;
+    
+      const formContainer = document.createElement("div");
+      formContainer.id = "contact-form-container";
+      formContainer.innerHTML = this.contactFormTemplate();
+      
+      chatContainer.appendChild(formContainer);
+    },
+
     getMessageTime() {
       return new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -320,8 +338,23 @@
           <textarea id="contact-message" placeholder="Your Message" rows="4" required></textarea>
           <button id="submit-contact">Submit</button>
         </div>
-      `;
-    },
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("submit-contact").addEventListener("click", function () {
+              const name = document.getElementById("contact-name").value;
+              const email = document.getElementById("contact-email").value;
+              const message = document.getElementById("contact-message").value;
+              
+              if (name && email && message) {
+                console.log("Form submitted:", { name, email, message });
+                alert("Your message has been submitted!");
+              } else {
+                alert("Please fill in all fields.");
+              }
+            });
+          });
+        </script>`;
+    },    
 
     setupEventListeners() {
       const sendMessageButton = document.getElementById("send-message");
@@ -366,6 +399,10 @@
         const typingIndicator = document.getElementById("typing-indicator");
         if (typingIndicator) this.removeTypingIndicator();
         this.appendMessage("ChatBot", content);
+
+        if (data.task_creation) {
+          this.renderContactForm();
+        }
       });
 
       this.socket.on("typing", () => {
