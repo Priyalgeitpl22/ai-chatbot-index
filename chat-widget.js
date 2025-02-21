@@ -283,6 +283,7 @@
       formContainer.innerHTML = this.contactFormTemplate();
       
       chatContainer.appendChild(formContainer);
+      this.setupContactFormListener();
     },
 
     getMessageTime() {
@@ -328,6 +329,7 @@
         </div>
       `;
     },
+
 
     contactFormTemplate() {
       return `
@@ -497,19 +499,29 @@
 
     setupContactFormListener() {
       const submitButton = document.getElementById("submit-contact");
-      submitButton.addEventListener("click", () => {
-        const name = document.getElementById("contact-name").value.trim();
-        const email = document.getElementById("contact-email").value.trim();
-        const message = document.getElementById("contact-message").value.trim();
-        if (name && email && message) {
-          console.log("Contact form submitted:", { name, email, message });
-          alert("Thank you! We will get back to you soon.");
-          document.querySelector(".contact-form").reset();
-        } else {
-          alert("Please fill out all fields.");
-        }
-      });
+      if (submitButton) {
+        submitButton.addEventListener("click", () => {
+          const name = document.getElementById("contact-name").value.trim();
+          const email = document.getElementById("contact-email").value.trim();
+          const message = document.getElementById("contact-message").value.trim();
+          
+          if (name && email && message) {
+            this.socket.emit("createTask", { 
+              aiOrgId: this.options.orgId, 
+              threadId: this.threadId, 
+              name: name, 
+              email: email, 
+              query: message 
+            });
+            alert("Your message has been submitted!");
+            document.querySelector(".contact-form").reset();
+          } else {
+            alert("Please fill in all fields.");
+          }
+        });
+      }
     },
+    
 
     appendMessage(sender, message) {
       const messagesContainer = document.getElementById("chat-messages");
