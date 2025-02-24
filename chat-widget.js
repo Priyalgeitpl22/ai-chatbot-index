@@ -272,19 +272,25 @@
       }
     },
 
-    renderContactForm() {
-      const chatContainer = document.getElementById("chat-messages");
-      if (!chatContainer) return;
-      
-      if (document.getElementById("contact-form-container")) return;
-    
-      const formContainer = document.createElement("div");
-      formContainer.id = "contact-form-container";
-      formContainer.innerHTML = this.contactFormTemplate();
-      
-      chatContainer.appendChild(formContainer);
-      this.setupContactFormListener();
-    },
+renderContactForm() {
+  const chatWidget = document.querySelector(".chat-widget");
+  if (!chatWidget) return;
+  
+  if (document.getElementById("contact-form-container")) return;
+
+  const formContainer = document.createElement("div");
+  formContainer.id = "contact-form-container";
+  formContainer.innerHTML = this.contactFormTemplate();
+  
+  const chatInputContainer = document.querySelector(".chat-input-container");
+  if (chatInputContainer) {
+    chatWidget.insertBefore(formContainer, chatInputContainer);
+  } else {
+    chatWidget.appendChild(formContainer);
+  }
+  this.setupContactFormListener();
+},
+
 
     getMessageTime() {
       return new Date().toLocaleTimeString([], {
@@ -397,6 +403,7 @@
       });
 
       this.socket.on("receiveMessage", (data) => {
+        console.log("Message received:", data);
         const { content } = data;
         const typingIndicator = document.getElementById("typing-indicator");
         if (typingIndicator) this.removeTypingIndicator();
@@ -497,30 +504,53 @@
       document.body.appendChild(script);
     },
 
-    setupContactFormListener() {
-      const submitButton = document.getElementById("submit-contact");
-      if (submitButton) {
-        submitButton.addEventListener("click", () => {
-          const name = document.getElementById("contact-name").value.trim();
-          const email = document.getElementById("contact-email").value.trim();
-          const message = document.getElementById("contact-message").value.trim();
-          
-          if (name && email && message) {
-            this.socket.emit("createTask", { 
-              aiOrgId: this.options.orgId, 
-              threadId: this.threadId, 
-              name: name, 
-              email: email, 
-              query: message 
-            });
-            alert("Your message has been submitted!");
-            document.querySelector(".contact-form").reset();
-          } else {
-            alert("Please fill in all fields.");
-          }
+setupContactFormListener() {
+  const submitButton = document.getElementById("submit-contact");
+  if (submitButton) {
+    submitButton.addEventListener("click", () => {
+      const name = document.getElementById("contact-name").value.trim();
+      const email = document.getElementById("contact-email").value.trim();
+      const message = document.getElementById("contact-message").value.trim();
+      
+      if (name && email && message) {
+        this.socket.emit("createTask", { 
+          aiOrgId: this.options.orgId, 
+          threadId: this.threadId, 
+          name: name, 
+          email: email, 
+          query: message 
         });
+        
+        const formContainer = document.getElementById("contact-form-container");
+        if (formContainer) {
+          formContainer.remove();
+        }
+        
+        const chatInputContainer = document.querySelector(".chat-input-container");
+        if (chatInputContainer) {
+          const successMessage = document.createElement("div");
+          successMessage.id = "task-success-message";
+          successMessage.style.textAlign = "center";
+          successMessage.style.padding = "5px";
+          successMessage.style.backgroundColor = "#d4edda"; 
+          successMessage.style.color = "#155724"; 
+          successMessage.textContent = "Task is created successfully";
+          
+          chatInputContainer.parentNode.insertBefore(successMessage, chatInputContainer);
+          
+          setTimeout(() => {
+            if (successMessage) {
+              successMessage.remove();
+            }
+          }, 3000);
+        }
+      } else {
+        alert("Please fill in all fields.");
       }
-    },
+    });
+  }
+},
+
     
 
     appendMessage(sender, message) {
