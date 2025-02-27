@@ -7,6 +7,7 @@
         elementId: "chat-widget",
         apiEndpoint: "",
         allowFileUpload: true,
+        allowNameEmail: false,
         allowEmojis: true,
         allowAudioCall: false,
         position: "bottom-left",
