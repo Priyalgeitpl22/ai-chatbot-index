@@ -381,12 +381,29 @@ renderContactForm() {
         this.appendTypingIndicator();
       
         if (!this.threadId) {
-          this.socket.emit("startChat", { sender: "User", aiOrgId: this.options.orgId });
-          this.socket.once("chatStarted", (data) => {
-            this.threadId = data.threadId;
-            this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId, createdAt: Date.now() });
-            this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId, aiOrgId: this.options.orgId });
-          });
+          const currentUrl = window.location.href;
+          fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(ipData => {
+              const ipAddress = ipData.ip;
+              const payload = { sender: "User", aiOrgId: this.options.orgId, url: currentUrl, ip: ipAddress };
+              this.socket.emit("startChat", payload);
+              this.socket.once("chatStarted", (data) => {
+                this.threadId = data.threadId;
+                this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId, createdAt: Date.now() });
+                this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId, aiOrgId: this.options.orgId });
+              });
+            })
+            .catch(error => {
+              console.error("Error fetching IP:", error);
+              const payload = { sender: "User", aiOrgId: this.options.orgId, url: currentUrl, ip: "unknown" };
+              this.socket.emit("startChat", payload);
+              this.socket.once("chatStarted", (data) => {
+                this.threadId = data.threadId;
+                this.socket.emit("updateDashboard", { sender: "User", message, threadId: this.threadId, createdAt: Date.now() });
+                this.socket.emit("sendMessage", { sender: "User", content: message, threadId: this.threadId, aiOrgId: this.options.orgId });
+              });
+            });
         } else {
           this.socket.emit("newThreadCreated", this.threadId);
           this.socket.emit("updateDashboard", { sender: "User", content: message, threadId: this.threadId, createdAt: Date.now() });
