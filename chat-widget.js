@@ -5,6 +5,8 @@
     userEmail: '',
     // State for user info collection: "none", "waitingForName", "waitingForEmail", "done"
     collectUserInfoState: "none",
+    // Property to temporarily store the first user message during identification
+    pendingUserMessage: null,
     threadId: null,
     chatHistory: [],
 
@@ -86,7 +88,7 @@
       this.globalStylesInjected = true;
     },
     
-    // Helper functions to store messages both in the UI and on the backend.
+    // Helper function to store the user message in UI and send it to backend.
     storeUserMessage(content) {
       this.appendMessage("User", content);
       if (this.threadId) {
@@ -100,11 +102,12 @@
       }
     },
     
+    // Helper function to store a bot message.
     storeBotMessage(content) {
       this.appendMessage("ChatBot", content);
       if (this.threadId) {
         this.socket.emit("sendMessage", {
-          sender: "ChatBot",
+          sender: "Bot",  
           content,
           threadId: this.threadId,
           aiOrgId: this.options.orgId,
@@ -130,10 +133,14 @@
       if (isBottomRight) {
         this.container.querySelector(".chat-container").style.flexDirection = "row-reverse";
       }
-      this.container.querySelector(".chat-icon").addEventListener("click", () => this.renderChatWindow());
-      document.getElementById("close-message").addEventListener("click", () => {
-        document.getElementById("chat-message").style.display = "none";
-      });
+      this.container
+        .querySelector(".chat-icon")
+        .addEventListener("click", () => this.renderChatWindow());
+      document
+        .getElementById("close-message")
+        .addEventListener("click", () => {
+          document.getElementById("chat-message").style.display = "none";
+        });
       setTimeout(() => {
         const chatMessage = document.getElementById("chat-message");
         if (chatMessage) chatMessage.style.display = "flex";
@@ -161,8 +168,7 @@
               <img src="https://cdn-icons-png.flaticon.com/128/8213/8213476.png" alt="Close" width="16px" />
             </button>
           </div>
-          <div class="chat-messages" id="chat-messages" style="display: flex; flex-direction: column;">
-          </div>
+          <div class="chat-messages" id="chat-messages" style="display: flex; flex-direction: column;"></div>
           ${this.options.availability ? this.chatInputTemplate() : this.contactFormTemplate()}
         </div>
       `;
@@ -178,13 +184,10 @@
     renderContactForm() {
       const chatWidget = document.querySelector(".chat-widget");
       if (!chatWidget) return;
-      
       if (document.getElementById("contact-form-container")) return;
-    
       const formContainer = document.createElement("div");
       formContainer.id = "contact-form-container";
       formContainer.innerHTML = this.contactFormTemplate();
-      
       const chatInputContainer = document.querySelector(".chat-input-container");
       if (chatInputContainer) {
         chatWidget.insertBefore(formContainer, chatInputContainer);
@@ -228,46 +231,87 @@
       const chatInput = document.getElementById("chat-input");
       const message = chatInput.value.trim();
       if (!message) return;
-      
+      // Append user's message to UI
+      this.appendMessage("User", message);
+      chatInput.value = "";
+
+      // Identification flow when allowNameEmail is true
       if (this.options.allowNameEmail) {
         if (this.collectUserInfoState === "none") {
-          this.storeUserMessage(message);
+          // Save the first user message as pending (it has been stored via appendMessage and socket.emit)
+          this.pendingUserMessage = message;
+          this.socket.emit("sendMessage", {
+            sender: "User",
+            content: message,
+            threadId: this.threadId,
+            aiOrgId: this.options.orgId,
+            createdAt: Date.now()
+          });
           this.collectUserInfoState = "waitingForName";
           this.storeBotMessage("Please enter your name:");
-          chatInput.value = "";
           return;
         } else if (this.collectUserInfoState === "waitingForName") {
+          // Treat this message as the user's name
           this.userName = message;
+          this.socket.emit("sendMessage", {
+            sender: "User",
+            content: message,
+            threadId: this.threadId,
+            aiOrgId: this.options.orgId,
+            createdAt: Date.now()
+          });
           this.collectUserInfoState = "waitingForEmail";
-          this.storeUserMessage(message);
           this.storeBotMessage(`Thank you, ${this.userName}. Please enter your email:`);
-          chatInput.value = "";
           return;
         } else if (this.collectUserInfoState === "waitingForEmail") {
+          // Treat this message as the user's email
           this.userEmail = message;
+          this.socket.emit("sendMessage", {
+            sender: "User",
+            content: message,
+            threadId: this.threadId,
+            aiOrgId: this.options.orgId,
+            createdAt: Date.now()
+          });
           this.collectUserInfoState = "done";
+          // Update thread info on the server.
           this.socket.emit("updateThreadInfo", {
             threadId: this.threadId,
             name: this.userName,
             email: this.userEmail,
           });
-          this.storeUserMessage(message);
-          this.storeBotMessage("Thank you. Let's start chatting now.");
-          chatInput.value = "";
+          // Show the typing indicator before processing the pending message.
+          this.appendTypingIndicator();
+          // Now process the pending first message without re-displaying it.
+          if (this.pendingUserMessage) {
+            this.socket.emit("processPendingMessage", {
+              sender: "User",
+              content: this.pendingUserMessage,
+              threadId: this.threadId,
+              aiOrgId: this.options.orgId,
+              createdAt: Date.now()
+            });
+            this.pendingUserMessage = null;
+          }
           return;
         }
       }
       
-      this.storeUserMessage(message);
+      // Normal flow when allowNameEmail is false or identification is complete.
+      this.socket.emit("sendMessage", {
+        sender: "User",
+        content: message,
+        threadId: this.threadId,
+        aiOrgId: this.options.orgId,
+        createdAt: Date.now()
+      });
       if (this.onlinAgents.length === 0) this.appendTypingIndicator();
-      this.socket.emit("newThreadCreated", this.threadId);
       this.socket.emit("updateDashboard", {
         sender: "User",
         content: message,
         threadId: this.threadId,
         createdAt: Date.now()
       });
-      chatInput.value = "";
     },
     
     chatInputTemplate() {
@@ -306,7 +350,6 @@
       const emojiPickerButton = document.getElementById("emoji-picker");
       
       sendMessageButton.addEventListener("click", () => this.sendMessage());
-      
       chatInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
@@ -397,7 +440,13 @@
           const email = document.getElementById("contact-email").value.trim();
           const message = document.getElementById("contact-message").value.trim();
           if (name && email && message) {
-            this.socket.emit("createTask", { aiOrgId: this.options.orgId, threadId: this.threadId, name, email, query: message });
+            this.socket.emit("createTask", {
+              aiOrgId: this.options.orgId,
+              threadId: this.threadId,
+              name,
+              email,
+              query: message
+            });
             const formContainer = document.getElementById("contact-form-container");
             if (formContainer) formContainer.remove();
             const chatInputContainer = document.querySelector(".chat-input-container");
