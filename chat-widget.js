@@ -10,22 +10,26 @@
     threadId: null,
     chatHistory: [],
 
-    init(options) {
+    async init(options) {
+      debugger
+      const response = await fetch(`http://localhost:5003/api/chat/config?orgId=${options.orgId}`);
+      const data = await response.json();
+
       const defaultOptions = {
         elementId: "chat-widget",
-        apiEndpoint: "",
-        allowFileUpload: true,
-        allowNameEmail: true,  
-        allowEmojis: true,
-        allowAudioCall: false,
-        position: "bottom-left",
-        iconColor: "#56a2ed",
-        chatWindowColor: "#ffffff",
-        fontColor: "#000000",
-        availability: true,
-        socketServer: "http://localhost:5003",
+        apiEndpoint: data.data?.socketServer,
+        allowFileUpload: data.data?.allowFileUpload,
+        allowNameEmail: data.data?.allowNameEmail,  
+        allowEmojis: data.data?.allowEmojis,  
+        position: data.data?.position,
+        orgId: data.data?.aiOrgId,
+        iconColor: data.data?.iconColor,
+        chatWindowColor: data.data?.chatWindowColor,
+        fontColor: data.data?.fontColor,
+        availability: data.data?.availability,
+        socketServer: data.data?.socketServer,
       };
-      this.options = { ...defaultOptions, ...options };
+      this.options = { ...defaultOptions };
       this.container = document.getElementById(this.options.elementId);
       if (!this.container) {
         console.error("Chat widget container not found!");
@@ -228,6 +232,7 @@
     },
     
     sendMessage() {
+      debugger
       const chatInput = document.getElementById("chat-input");
       const message = chatInput.value.trim();
       if (!message) return;
@@ -322,7 +327,6 @@
             <div class="chat-actions">
               ${this.options.allowEmojis ? '<button id="emoji-picker"><img src="https://cdn-icons-png.flaticon.com/128/4989/4989500.png" alt="Emoji" width="20" height="20" /></button>' : ""}
               ${this.options.allowFileUpload ? '<input type="file" id="file-upload" style="display: none;" /><button id="upload-button"><img src="https://cdn-icons-png.flaticon.com/128/10847/10847957.png" alt="Upload" width="20" height="20"/></button>' : ""}
-              ${this.options.allowAudioCall ? '<button id="audio-call">🎤</button>' : ""}
               <button id="send-message"><img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" alt="Send" width="20" height="20"/></button>
             </div>
           </div>
