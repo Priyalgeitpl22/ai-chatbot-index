@@ -101,6 +101,7 @@
           content,
           threadId: this.threadId,
           aiOrgId: this.options.orgId,
+          allowNameEmail: this.options.allowNameEmail,
           createdAt: Date.now()
         });
       }
@@ -115,6 +116,7 @@
           content,
           threadId: this.threadId,
           aiOrgId: this.options.orgId,
+          allowNameEmail: this.options.allowNameEmail,
           createdAt: Date.now()
         });
       }
@@ -250,6 +252,7 @@
             content: message,
             threadId: this.threadId,
             aiOrgId: this.options.orgId,
+            allowNameEmail: this.options.allowNameEmail,
             createdAt: Date.now()
           });
           this.collectUserInfoState = "waitingForName";
@@ -263,6 +266,7 @@
             content: message,
             threadId: this.threadId,
             aiOrgId: this.options.orgId,
+            allowNameEmail: this.options.allowNameEmail,
             createdAt: Date.now()
           });
           this.collectUserInfoState = "waitingForEmail";
@@ -276,6 +280,7 @@
             content: message,
             threadId: this.threadId,
             aiOrgId: this.options.orgId,
+            allowNameEmail: this.options.allowNameEmail,
             createdAt: Date.now()
           });
           this.collectUserInfoState = "done";
@@ -308,6 +313,7 @@
         content: message,
         threadId: this.threadId,
         aiOrgId: this.options.orgId,
+        allowNameEmail: this.options.allowNameEmail,
         createdAt: Date.now()
       });
       if (this.onlinAgents.length === 0) this.appendTypingIndicator();
