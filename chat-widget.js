@@ -19,8 +19,10 @@
         elementId: "chat-widget",
         apiEndpoint: data.data?.socketServer,
         allowFileUpload: data.data?.allowFileUpload,
-        allowNameEmail: data.data?.allowNameEmail,  
-        allowEmojis: data.data?.allowEmojis,  
+        allowNameEmail: data.data?.allowNameEmail,
+        allowCustomGreeting: data.data?.allowCustomGreeting,
+        customGreetingMessage: data.data?.customGreetingMessage,
+        allowEmojis: data.data?.allowEmojis,
         position: data.data?.position,
         orgId: data.data?.aiOrgId,
         iconColor: data.data?.iconColor,
@@ -40,19 +42,19 @@
       this.injectGlobalStyles();
       this.renderIcon();
     },
-    
+
     getPositionStyles() {
       return this.options.position === "bottom-left"
         ? "left: 10px; bottom: 10px;"
         : "right: 10px; bottom: 10px;";
     },
-    
+
     injectStyle(cssText) {
       const style = document.createElement("style");
       style.innerHTML = cssText;
       document.head.appendChild(style);
     },
-    
+
     injectGlobalStyles() {
       if (this.globalStylesInjected) return;
       const css = `
@@ -91,7 +93,7 @@
       this.injectStyle(css);
       this.globalStylesInjected = true;
     },
-    
+
     // Helper function to store the user message in UI and send it to backend.
     storeUserMessage(content) {
       this.appendMessage("User", content);
@@ -106,13 +108,13 @@
         });
       }
     },
-    
+
     // Helper function to store a bot message.
     storeBotMessage(content) {
       this.appendMessage("ChatBot", content);
       if (this.threadId) {
         this.socket.emit("sendMessage", {
-          sender: "Bot",  
+          sender: "Bot",
           content,
           threadId: this.threadId,
           aiOrgId: this.options.orgId,
@@ -121,7 +123,7 @@
         });
       }
     },
-    
+
     renderIcon() {
       const positionStyles = this.getPositionStyles();
       const isBottomRight = this.options.position === "bottom-right";
@@ -152,7 +154,7 @@
         if (chatMessage) chatMessage.style.display = "flex";
       }, 2000);
     },
-    
+
     renderChatWindow() {
       const positionStyles = this.getPositionStyles();
       this.container.innerHTML = `
@@ -202,18 +204,18 @@
       }
       this.setupContactFormListener();
     },
-    
+
     getMessageTime() {
       return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     },
-    
+
     fetchIp() {
       return fetch('https://api.ipify.org?format=json')
         .then(response => response.json())
         .then(data => data.ip)
         .catch(() => "unknown");
     },
-    
+
     startChatThread() {
       const currentUrl = window.location.href;
       this.fetchIp().then(ipAddress => {
@@ -228,11 +230,15 @@
         this.socket.emit("startChat", payload);
         this.socket.once("chatStarted", (data) => {
           this.threadId = data.threadId;
-          this.storeBotMessage("Hello! How can I help you?");
+          const greetingMessage = this.options.allowCustomGreeting && this.options.customGreetingMessage
+            ? this.options.customGreetingMessage
+            : "Hello! How can I help you?";
+
+          this.storeBotMessage(greetingMessage);
         });
       });
     },
-    
+
     sendMessage() {
       debugger
       const chatInput = document.getElementById("chat-input");
@@ -306,7 +312,7 @@
           return;
         }
       }
-      
+
       // Normal flow when allowNameEmail is false or identification is complete.
       this.socket.emit("sendMessage", {
         sender: "User",
@@ -324,7 +330,7 @@
         createdAt: Date.now()
       });
     },
-    
+
     chatInputTemplate() {
       return `
         <div class="chat-input-container">
@@ -339,7 +345,7 @@
         </div>
       `;
     },
-    
+
     contactFormTemplate() {
       return `
         <div class="contact-form">
@@ -351,14 +357,14 @@
         </div>
       `;
     },
-    
+
     setupEventListeners() {
       const sendMessageButton = document.getElementById("send-message");
       const chatInput = document.getElementById("chat-input");
       const fileUploadInput = document.getElementById("file-upload");
       const uploadButton = document.getElementById("upload-button");
       const emojiPickerButton = document.getElementById("emoji-picker");
-      
+
       sendMessageButton.addEventListener("click", () => this.sendMessage());
       chatInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
@@ -366,13 +372,13 @@
           sendMessageButton.click();
         }
       });
-      
+
       this.socket.on("receiveMessage", (data) => {
         if (document.getElementById("typing-indicator")) this.removeTypingIndicator();
         this.appendMessage("ChatBot", data.content);
         if (data.task_creation) this.renderContactForm();
       });
-      
+
       this.socket.on("typing", () => this.appendTypingIndicator());
       this.socket.on("stopTyping", () => this.removeTypingIndicator());
       this.socket.on("agentStatusUpdate", (data) => { this.onlinAgents = data; });
@@ -382,7 +388,7 @@
           this.appendMessage("ChatBot", data.content);
         }
       });
-      
+
       if (uploadButton && fileUploadInput) {
         uploadButton.addEventListener("click", () => fileUploadInput.click());
         fileUploadInput.addEventListener("change", (event) => {
@@ -390,10 +396,10 @@
           if (file) this.storeUserMessage(`Uploaded: ${file.name}`);
         });
       }
-      
+
       if (this.options.allowEmojis) this.setupEmojiPicker(chatInput, emojiPickerButton);
     },
-    
+
     setupEmojiPicker(chatInput, emojiPickerButton) {
       const script = document.createElement("script");
       script.type = "module";
@@ -408,7 +414,7 @@
         picker.style.setProperty("--border-color", "none");
         picker.style.setProperty("--button-active-background", "#999");
         picker.style.setProperty("--button-hover-background", "#d9d9d9");
-        
+
         const shadowRoot = picker.shadowRoot;
         if (shadowRoot) {
           const favoritesSection = shadowRoot.querySelector(".favorites");
@@ -425,7 +431,7 @@
             shadowRoot.appendChild(style);
           }
         }
-        
+
         emojiPickerButton.addEventListener("click", (event) => {
           event.stopPropagation();
           picker.style.display = picker.style.display === "none" || picker.style.display === "" ? "block" : "none";
@@ -441,7 +447,7 @@
       };
       document.body.appendChild(script);
     },
-    
+
     setupContactFormListener() {
       const submitButton = document.getElementById("submit-contact");
       if (submitButton) {
@@ -477,7 +483,7 @@
         });
       }
     },
-    
+
     appendMessage(sender, message) {
       const messagesContainer = document.getElementById("chat-messages");
       const timeStr = this.getMessageTime();
@@ -490,14 +496,14 @@
       timeElem.textContent = timeStr;
       messagesContainer.append(msgElem, timeElem);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      
+
       this.chatHistory.push({
         sender,
         message,
         time: timeStr
       });
     },
-    
+
     appendTypingIndicator() {
       const messagesContainer = document.getElementById("chat-messages");
       if (!messagesContainer || document.getElementById("typing-indicator")) return;
@@ -508,12 +514,12 @@
       messagesContainer.appendChild(indicator);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     },
-    
+
     removeTypingIndicator() {
       const indicator = document.getElementById("typing-indicator");
       if (indicator) indicator.remove();
     }
   };
-  
+
   global.ChatWidget = ChatWidget;
 })(window);
