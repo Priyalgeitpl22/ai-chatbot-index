@@ -11,7 +11,6 @@
     chatHistory: [],
 
     async init(options) {
-      debugger
       const response = await fetch(`http://localhost:5003/api/chat/config?orgId=${options.orgId}`);
       const data = await response.json();
 
@@ -22,6 +21,8 @@
         allowNameEmail: data.data?.allowNameEmail,
         allowCustomGreeting: data.data?.allowCustomGreeting,
         customGreetingMessage: data.data?.customGreetingMessage,
+        allowFontFamily:data.data?.allowFontFamily, 
+        customFontFamily:data.data?.customFontFamily,
         allowEmojis: data.data?.allowEmojis,
         position: data.data?.position,
         orgId: data.data?.aiOrgId,
@@ -57,10 +58,13 @@
 
     injectGlobalStyles() {
       if (this.globalStylesInjected) return;
+      const fontFamily = this.options.allowFontFamily 
+      ? `${this.options.customFontFamily}, sans-serif` 
+      : `Arial, sans-serif`;
       const css = `
         /* Global Styles */
         .chat-icon:hover { opacity: 0.8; }
-        .chat-widget { position: fixed; border: 1px solid #ddd; border-radius: 5px; width: 380px; height: 550px; display: flex; flex-direction: column; }
+        .chat-widget { font-family: ${fontFamily} !important; position: fixed; border: 1px solid #ddd; border-radius: 5px; width: 380px; height: 550px; display: flex; flex-direction: column; }
         .chat-header { color: white; border-radius: 5px 5px 0 0; }
         .chat-messages { flex: 1; overflow-y: scroll; scrollbar-width: none; -ms-overflow-style: none; padding: 10px; border-top: 1px solid #ddd; display: flex; flex-direction: column; }
         .chat-messages::-webkit-scrollbar { display: none; }
@@ -240,7 +244,6 @@
     },
 
     sendMessage() {
-      debugger
       const chatInput = document.getElementById("chat-input");
       const message = chatInput.value.trim();
       if (!message) return;
@@ -349,7 +352,7 @@
     contactFormTemplate() {
       return `
         <div class="contact-form">
-          <h3>Raise Ticket</h3>
+          <h3>Raise a ticket</h3>
           <input type="text" id="contact-name" placeholder="Your Name" required />
           <input type="email" id="contact-email" placeholder="Your Email" required />
           <textarea id="contact-message" placeholder="Your Message" rows="4" required></textarea>
